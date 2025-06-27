@@ -6,6 +6,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.prompts import PromptTemplate
+from langchain.retrievers import BM25Retriever, EnsembleRetriever
 
 llm = Ollama(model="mistral")
 
@@ -21,13 +22,26 @@ splits = text_splitter.split_documents(docs)
 embeddings = OllamaEmbeddings(model="nomic-embed-text")
 vectorstore = FAISS.from_documents(splits, embeddings)
 
-# Add as a tool
-retriever = vectorstore.as_retriever()
+## Hybrid Document Search
+# Add keyword-based retriever
+bm25_retriever = BM25Retriever.from_documents(splits)
+bm25_retriever.k = 2  # Number of keyword results
+
+# Configure vector retriever
+vector_retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+
+# Combine both methods
+ensemble_retriever = EnsembleRetriever(
+    retrievers=[bm25_retriever, vector_retriever],
+    weights=[0.4, 0.6]  # Tune based on your needs
+)
+
+# Update tool
 tools = [
     Tool(
-        name="Document Search",
-        func=retriever.get_relevant_documents,
-        description="Useful for answering questions about LLMs"
+        name="Hybrid Document Search",
+        func=ensemble_retriever.get_relevant_documents,
+        description="Combines semantic and keyword search for better results"
     )
 ]
 

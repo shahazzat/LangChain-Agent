@@ -4,3 +4,4 @@ langchainhub
 duckduckgo-search
 wolframalpha
 beautifulsoup4
+rank_bm25
