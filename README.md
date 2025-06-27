@@ -135,5 +135,3 @@ To create the `requirements.txt` file:
 ```bash
 pip freeze > requirements.txt
 ```
-
-This README provides clear installation instructions, usage examples, and troubleshooting tips while maintaining a professional format suitable for GitHub. The structure allows users to quickly understand, install, and modify the agent for their needs.
