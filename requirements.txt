@@ -3,3 +3,4 @@ langchain-community
 langchainhub
 duckduckgo-search
 wolframalpha
+beautifulsoup4
