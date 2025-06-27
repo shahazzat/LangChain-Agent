@@ -7,6 +7,13 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.retrievers import BM25Retriever, EnsembleRetriever
+from bs4 import BeautifulSoup
+
+# Add caching for embeddings
+from langchain.cache import SQLiteCache
+from langchain.globals import set_llm_cache
+set_llm_cache(SQLiteCache(database_path=".langchain.db"))
+
 
 llm = Ollama(model="mistral")
 
@@ -15,8 +22,23 @@ loader = WebBaseLoader("https://en.wikipedia.org/wiki/Large_language_model")
 docs = loader.load()
 
 # Split into chunks
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-splits = text_splitter.split_documents(docs)
+# Update the text splitter with better parameters
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=512,  # Better for most LLM contexts
+    chunk_overlap=128,
+    length_function=len,
+    separators=["\n\n", "\n", ". ", " ", ""]  # More natural splitting
+)
+
+# Add document cleaning
+def clean_html(docs):
+    for doc in docs:
+        soup = BeautifulSoup(doc.page_content, 'html.parser')
+        doc.page_content = soup.get_text(separator=' ', strip=True)
+    return docs
+
+cleaned_docs = clean_html(docs)
+splits = text_splitter.split_documents(cleaned_docs)
 
 # Create vector store
 embeddings = OllamaEmbeddings(model="nomic-embed-text")
@@ -71,5 +93,7 @@ agent = create_react_agent(llm, tools, prompt=prompt_template)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
 # Now the agent can use docs for answers!
-response = agent_executor.invoke({"input": "What are the risks of LLMs?"})
+question = "What are the risks of LLMs?"
+response = agent_executor.invoke({"input": question})
 print(response["output"])
+
